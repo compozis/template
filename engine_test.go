@@ -14,8 +14,8 @@ func TestEngine_ExecuteTemplate(t *testing.T) {
 	tests := []struct {
 		filename string
 	}{
-		{"article_page",},
-		{"plain_page",},
+		{"article_page"},
+		{"plain_page"},
 		{"search"},
 	}
 

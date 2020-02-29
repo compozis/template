@@ -10,4 +10,3 @@ type File interface {
 type FileSystem interface {
 	Open(name string) (File, error)
 }
-
