@@ -1,0 +1,9 @@
+<html>
+<head>
+    <title>Article Title</title>
+</head>
+<body>
+<div class="content">ARTICLE</div>
+<div class="footer">[DEFAULT] Footer</div>
+</body>
+</html>

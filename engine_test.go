@@ -2,6 +2,8 @@ package template_test
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"github.com/compozis/template"
 	"gotest.tools/assert"
 	"io/ioutil"
@@ -28,6 +30,32 @@ func TestEngine_ExecuteTemplate(t *testing.T) {
 			err := engine.ExecuteTemplate(&buf, test.filename+".gohtml", nil)
 			assert.NilError(t, err)
 			assert.DeepEqual(t, buf.Bytes(), readFile(test.filename+".out"))
+		})
+	}
+}
+func TestEngine_ExecuteTemplate_WithData(t *testing.T) {
+	tests := []struct {
+		filename string
+		input    string
+	}{
+		{"article_page", "01"},
+	}
+
+	engine := template.NewEngine(template.Dir(resourcesDir()))
+	engine.Partials("component/echo.gohtml")
+
+	for _, test := range tests {
+		t.Run(test.filename, func(t *testing.T) {
+			inputFile := readFile(fmt.Sprintf("%s.%s.json", test.filename, test.input))
+
+			var input map[string]interface{}
+			err := json.NewDecoder(bytes.NewReader(inputFile)).Decode(&input)
+			assert.NilError(t, err)
+
+			var buf bytes.Buffer
+			err = engine.ExecuteTemplate(&buf, test.filename+".gohtml", input)
+			assert.NilError(t, err)
+			assert.DeepEqual(t, buf.Bytes(), readFile(fmt.Sprintf("%s.%s.out", test.filename, test.input)))
 		})
 	}
 }
