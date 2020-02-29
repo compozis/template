@@ -1,0 +1,13 @@
+<html>
+<head>
+    <title>{{.Title}}</title>
+</head>
+<body>
+<div class="content">
+    {{- block "Content" .}}[DEFAULT] Content{{end -}}
+</div>
+<div class="footer">
+    {{- block "Footer" .}}[DEFAULT] Footer{{end -}}
+</div>
+</body>
+</html>

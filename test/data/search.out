@@ -1,0 +1,12 @@
+<html>
+<head>
+    <title></title>
+</head>
+<body>
+<div class="content">
+    <div class="sidebar">Search FILTERS</div>
+    <div class="maincontent">Search RESULTS</div>
+</div>
+<div class="footer">[DEFAULT] Footer</div>
+</body>
+</html>

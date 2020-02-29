@@ -1,0 +1,9 @@
+{{extends "layouts/master.gohtml"}}
+{{define "Content"}}
+    <div class="sidebar">
+        {{- block "Sidebar" .}}{{end -}}
+    </div>
+    <div class="maincontent">
+        {{- block "MainContent" .}}{{end -}}
+    </div>
+{{end}}
