@@ -5,7 +5,10 @@
 <body>
 <div class="content">
     <div class="sidebar">Search FILTERS</div>
-    <div class="maincontent">Search RESULTS</div>
+    <div class="maincontent">
+    <div>Search RESULTS</div>
+    <div class="echo">Test ECHO message</div>
+</div>
 </div>
 <div class="footer">[DEFAULT] Footer</div>
 </body>

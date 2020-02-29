@@ -20,6 +20,7 @@ func TestEngine_ExecuteTemplate(t *testing.T) {
 	}
 
 	engine := template.NewEngine(template.Dir(resourcesDir()))
+	engine.Partials("component/echo.gohtml")
 
 	for _, test := range tests {
 		t.Run(test.filename, func(t *testing.T) {
@@ -58,25 +59,25 @@ func TestEngine_Cache(t *testing.T) {
 			"NoCache_Base",
 			template.NoCache{},
 			[]string{"article_page.gohtml", "plain_page.gohtml", "search.gohtml"},
-			7,
+			10,
 		},
 		{
 			"NoCache_ReExecute",
 			template.NoCache{},
 			[]string{"article_page.gohtml", "plain_page.gohtml", "search.gohtml", "search.gohtml"},
-			10,
+			14,
 		},
 		{
 			"PermanentCache_Base",
 			template.NewPermanentCache(),
 			[]string{"article_page.gohtml", "plain_page.gohtml", "search.gohtml"},
-			5,
+			6,
 		},
 		{
 			"PermanentCache_ReExecute",
 			template.NewPermanentCache(),
 			[]string{"article_page.gohtml", "plain_page.gohtml", "search.gohtml", "search.gohtml"},
-			5,
+			6,
 		},
 	}
 
@@ -88,6 +89,7 @@ func TestEngine_Cache(t *testing.T) {
 			}
 
 			engine := template.NewEngine(fs)
+			engine.Partials("component/echo.gohtml")
 			engine.Cache(test.cache)
 
 			for _, templateName := range test.templatesToExecute {

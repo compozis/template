@@ -18,6 +18,7 @@ type Engine struct {
 	modifyMux     sync.Mutex
 	extendsRegexp *regexp.Regexp
 	funcMap       FuncMap
+	partials      []string
 	cache         Cache
 }
 
@@ -55,6 +56,15 @@ func (e *Engine) Funcs(funcMap FuncMap) *Engine {
 	defer e.modifyMux.Unlock()
 
 	e.funcMap = funcMap
+
+	return e
+}
+
+func (e *Engine) Partials(partials ...string) *Engine {
+	e.modifyMux.Lock()
+	defer e.modifyMux.Unlock()
+
+	e.partials = append(e.partials, partials...)
 
 	return e
 }
@@ -120,6 +130,13 @@ func (e *Engine) getTemplateNoLock(filename string) (*template.Template, error) 
 		}
 	} else {
 		tmpl = template.New("").Funcs(template.FuncMap(e.funcMap))
+
+		for _, partial := range e.partials {
+			err := e.addPartial(tmpl, partial)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	tmpl, err = tmpl.Parse(string(contents))
@@ -130,4 +147,31 @@ func (e *Engine) getTemplateNoLock(filename string) (*template.Template, error) 
 	e.cache.put(filename, tmpl)
 
 	return tmpl, nil
+}
+
+func (e *Engine) addPartial(tmpl *template.Template, partial string) error {
+	partialTmpl := tmpl.New(partial)
+
+	file, err := e.fs.Open(partial)
+	if err != nil {
+		return fmt.Errorf("failed to open partial '%s' file: %w", partial, err)
+	}
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Printf("failed to close file after processing partial %s: %s", partial, err)
+		}
+	}()
+
+	contents, err := ioutil.ReadAll(file)
+	if err != nil {
+		return fmt.Errorf("failed to read partial '%s' contents: %w", partial, err)
+	}
+
+	tmpl, err = partialTmpl.Parse(string(contents))
+	if err != nil {
+		return fmt.Errorf("failed to parse template '%s' contents: %w", partial, err)
+	}
+
+	return nil
 }
