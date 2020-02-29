@@ -16,6 +16,7 @@ Features:
   * nesting of extended templates is supported
 * decoupled from native/system filesystem:
   * allows custom templates storage (ie. built into executable)
+* optional cache for built templates 
 
 ## Decisions
 

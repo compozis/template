@@ -7,12 +7,15 @@ import (
 	"io/ioutil"
 	"log"
 	"regexp"
+	"sync"
 )
 
 type Engine struct {
 	fs FileSystem
 
+	modifyMux     sync.Mutex
 	extendsRegexp *regexp.Regexp
+	cache         Cache
 }
 
 func NewEngine(fs FileSystem) *Engine {
@@ -22,6 +25,7 @@ func NewEngine(fs FileSystem) *Engine {
 		fs: fs,
 
 		extendsRegexp: extendsRegex,
+		cache:         NewPermanentCache(),
 	}
 }
 
@@ -33,8 +37,17 @@ func buildExtendsRegexp() *regexp.Regexp {
 	return extendsRegex
 }
 
+func (e *Engine) Cache(cache Cache) {
+	e.modifyMux.Lock()
+	defer e.modifyMux.Unlock()
+
+	if cache == nil {
+		panic("cache must not be nil")
+	}
+	e.cache = cache
+}
+
 func (e *Engine) ExecuteTemplate(wr io.Writer, name string, data interface{}) error {
-	// TODO: cache support
 	tmpl, err := e.getTemplate(name)
 	if err != nil {
 		return fmt.Errorf("can't get template: %w", err)
@@ -44,6 +57,26 @@ func (e *Engine) ExecuteTemplate(wr io.Writer, name string, data interface{}) er
 }
 
 func (e *Engine) getTemplate(filename string) (*template.Template, error) {
+	tmpl := e.cache.get(filename)
+	if tmpl == nil {
+		return e.prepareTemplate(filename)
+	}
+	return tmpl, nil
+}
+
+func (e *Engine) prepareTemplate(filename string) (*template.Template, error) {
+	e.modifyMux.Lock()
+	defer e.modifyMux.Unlock()
+
+	return e.getTemplateNoLock(filename)
+}
+
+func (e *Engine) getTemplateNoLock(filename string) (*template.Template, error) {
+	tmpl := e.cache.get(filename)
+	if tmpl != nil {
+		return tmpl, nil
+	}
+
 	file, err := e.fs.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open template '%s' file: %w", filename, err)
@@ -60,13 +93,11 @@ func (e *Engine) getTemplate(filename string) (*template.Template, error) {
 		return nil, fmt.Errorf("failed to read template '%s' contents: %w", filename, err)
 	}
 
-	var tmpl *template.Template
-
 	if match := e.extendsRegexp.FindSubmatchIndex(contents); len(match) > 0 {
 		parentName := string(contents[match[2]:match[3]])
 		contents = contents[match[1]:]
 
-		parentTmpl, err := e.getTemplate(parentName)
+		parentTmpl, err := e.getTemplateNoLock(parentName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get parent template '%s' for '%s': %w", parentName, filename, err)
 		}
@@ -83,6 +114,8 @@ func (e *Engine) getTemplate(filename string) (*template.Template, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template '%s' contents: %w", filename, err)
 	}
+
+	e.cache.put(filename, tmpl)
 
 	return tmpl, nil
 }

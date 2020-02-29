@@ -31,6 +31,76 @@ func TestEngine_ExecuteTemplate(t *testing.T) {
 	}
 }
 
+type nopWriter struct{}
+
+func (n2 nopWriter) Write(p []byte) (n int, err error) {
+	return len(p), nil
+}
+
+type countAccessFileSystem struct {
+	delegate template.FileSystem
+	count    int
+}
+
+func (c *countAccessFileSystem) Open(name string) (template.File, error) {
+	c.count += 1
+	return c.delegate.Open(name)
+}
+
+func TestEngine_Cache(t *testing.T) {
+	tests := []struct {
+		name               string
+		cache              template.Cache
+		templatesToExecute []string
+		count              int
+	}{
+		{
+			"NoCache_Base",
+			template.NoCache{},
+			[]string{"article_page.gohtml", "plain_page.gohtml", "search.gohtml"},
+			7,
+		},
+		{
+			"NoCache_ReExecute",
+			template.NoCache{},
+			[]string{"article_page.gohtml", "plain_page.gohtml", "search.gohtml", "search.gohtml"},
+			10,
+		},
+		{
+			"PermanentCache_Base",
+			template.NewPermanentCache(),
+			[]string{"article_page.gohtml", "plain_page.gohtml", "search.gohtml"},
+			5,
+		},
+		{
+			"PermanentCache_ReExecute",
+			template.NewPermanentCache(),
+			[]string{"article_page.gohtml", "plain_page.gohtml", "search.gohtml", "search.gohtml"},
+			5,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fs := &countAccessFileSystem{
+				delegate: template.Dir(resourcesDir()),
+				count:    0,
+			}
+
+			engine := template.NewEngine(fs)
+			engine.Cache(test.cache)
+
+			for _, templateName := range test.templatesToExecute {
+				var wr nopWriter
+				err := engine.ExecuteTemplate(wr, templateName, nil)
+				assert.NilError(t, err)
+			}
+
+			assert.Equal(t, fs.count, test.count)
+		})
+	}
+}
+
 func readFile(name string) []byte {
 	result, err := ioutil.ReadFile(path.Join(resourcesDir(), name))
 	if err != nil {
