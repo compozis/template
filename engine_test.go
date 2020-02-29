@@ -101,6 +101,19 @@ func TestEngine_Cache(t *testing.T) {
 	}
 }
 
+func TestEngine_Funcs(t *testing.T) {
+	engine := template.NewEngine(template.Dir(resourcesDir()))
+	engine.Funcs(template.FuncMap{
+		"plus":  func(a, b int) int { return a + b },
+		"minus": func(a, b int) int { return a - b },
+	})
+
+	var buf bytes.Buffer
+	err := engine.ExecuteTemplate(&buf, "funcs.gohtml", nil)
+	assert.NilError(t, err)
+	assert.DeepEqual(t, buf.Bytes(), readFile("funcs.out"))
+}
+
 func readFile(name string) []byte {
 	result, err := ioutil.ReadFile(path.Join(resourcesDir(), name))
 	if err != nil {

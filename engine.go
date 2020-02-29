@@ -10,11 +10,14 @@ import (
 	"sync"
 )
 
+type FuncMap template.FuncMap
+
 type Engine struct {
 	fs FileSystem
 
 	modifyMux     sync.Mutex
 	extendsRegexp *regexp.Regexp
+	funcMap       FuncMap
 	cache         Cache
 }
 
@@ -45,6 +48,15 @@ func (e *Engine) Cache(cache Cache) {
 		panic("cache must not be nil")
 	}
 	e.cache = cache
+}
+
+func (e *Engine) Funcs(funcMap FuncMap) *Engine {
+	e.modifyMux.Lock()
+	defer e.modifyMux.Unlock()
+
+	e.funcMap = funcMap
+
+	return e
 }
 
 func (e *Engine) ExecuteTemplate(wr io.Writer, name string, data interface{}) error {
@@ -107,7 +119,7 @@ func (e *Engine) getTemplateNoLock(filename string) (*template.Template, error) 
 			return nil, fmt.Errorf("failed to clone parent template '%s' for '%s': %w", parentName, filename, err)
 		}
 	} else {
-		tmpl = template.New("")
+		tmpl = template.New("").Funcs(template.FuncMap(e.funcMap))
 	}
 
 	tmpl, err = tmpl.Parse(string(contents))
